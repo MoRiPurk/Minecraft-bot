@@ -1,0 +1,14 @@
+{
+  "name": "mc-bot-manager",
+  "version": "1.0.0",
+  "description": "ระบบจัดการบอท Minecraft หลายตัวพร้อม dashboard สำหรับดูสถานะและควบคุมการเชื่อมต่อ",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "mineflayer": "^4.20.1",
+    "ws": "^8.18.0"
+  }
+}

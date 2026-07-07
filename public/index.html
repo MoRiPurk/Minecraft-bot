@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bot Control Room</title>
+<style>
+  :root {
+    --bg: #14181d;
+    --panel: #1b2027;
+    --panel-alt: #21272f;
+    --border: #2a313b;
+    --text: #e6e9ee;
+    --text-dim: #8b95a3;
+    --accent: #f2a65a;
+    --ok: #5ec8c0;
+    --err: #e5484d;
+    --warn: #e0c05a;
+    --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+    --sans: "Inter", -apple-system, "Segoe UI", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 28px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+
+  header h1 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: 0.2px;
+  }
+
+  header h1 span {
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  .summary {
+    display: flex;
+    gap: 18px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  .summary b { color: var(--text); }
+
+  .add-bot {
+    display: flex;
+    gap: 8px;
+    padding: 16px 28px;
+  }
+
+  .add-bot input {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: var(--mono);
+    width: 220px;
+  }
+
+  .add-bot input:focus { outline: 1px solid var(--accent); }
+
+  .add-bot button {
+    background: var(--accent);
+    color: #1a1305;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .add-bot button:hover { filter: brightness(1.08); }
+
+  main {
+    padding: 8px 28px 40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .username {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .status-pill {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .status-pill::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .status-connected { color: var(--ok); background: rgba(94,200,192,0.12); }
+  .status-progress   { color: var(--accent); background: rgba(242,166,90,0.12); }
+  .status-error      { color: var(--err); background: rgba(229,72,77,0.12); }
+  .status-off        { color: var(--text-dim); background: rgba(139,149,163,0.1); }
+
+  .pulse::before { animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.4); }
+  }
+
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .pipeline .step {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--panel-alt);
+    position: relative;
+  }
+
+  .pipeline .step.done { background: var(--ok); }
+  .pipeline .step.active { background: var(--accent); }
+  .pipeline .step.error { background: var(--err); }
+
+  .pipeline-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+  }
+
+  .log {
+    background: #0f1216;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    height: 150px;
+    overflow-y: auto;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--text-dim);
+  }
+
+  .log .line { white-space: pre-wrap; word-break: break-word; }
+  .log .time { color: #56606e; margin-right: 6px; }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .actions button {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--panel-alt);
+    color: var(--text);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 0.1s ease;
+  }
+
+  .actions button:hover { filter: brightness(1.15); }
+
+  .btn-disconnect { color: var(--err); border-color: rgba(229,72,77,0.3); }
+  .btn-reconnect { color: var(--ok); border-color: rgba(94,200,192,0.3); }
+
+  .empty {
+    color: var(--text-dim);
+    font-size: 13px;
+    padding: 40px 28px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Bot Control Room <span>· ห้องควบคุมบอท</span></h1>
+  <div class="summary">
+    <div>ทั้งหมด <b id="count-total">0</b></div>
+    <div>ออนไลน์ <b id="count-online">0</b></div>
+    <div>ออฟไลน์ <b id="count-offline">0</b></div>
+  </div>
+</header>
+
+<div class="add-bot">
+  <input id="new-username" type="text" placeholder="username บอทใหม่" />
+  <button onclick="addBot()">+ เพิ่มบอท</button>
+</div>
+
+<main id="cards"></main>
+
+<script>
+const STAGES = [
+  { key: 'connecting',      label: 'เชื่อมต่อ' },
+  { key: 'spawned',         label: 'spawn' },
+  { key: 'right-clicking',  label: 'คลิกขวา' },
+  { key: 'window-open',     label: 'เมนู' },
+  { key: 'waiting-respawn', label: 'respawn' },
+  { key: 'afk',             label: 'afk' },
+];
+
+const state = {}; // username -> { ...status, logs: [] }
+
+function stageIndex(status) {
+  const idx = STAGES.findIndex(s => s.key === status);
+  return idx === -1 ? 0 : idx;
+}
+
+function statusClass(status, connected) {
+  if (status === 'error') return 'status-error';
+  if (status === 'afk') return 'status-connected';
+  if (!connected || status === 'disconnected' || status === 'kicked') return 'status-off';
+  return 'status-progress';
+}
+
+function render() {
+  const cards = document.getElementById('cards');
+  const usernames = Object.keys(state).sort();
+
+  document.getElementById('count-total').textContent = usernames.length;
+  document.getElementById('count-online').textContent = usernames.filter(u => state[u].connected).length;
+  document.getElementById('count-offline').textContent = usernames.filter(u => !state[u].connected).length;
+
+  if (usernames.length === 0) {
+    cards.innerHTML = '<div class="empty">ยังไม่มีบอทเชื่อมต่อ — เพิ่มบอทด้านบนเพื่อเริ่มต้น</div>';
+    return;
+  }
+
+  cards.innerHTML = usernames.map(username => {
+    const s = state[username];
+    const cls = statusClass(s.status, s.connected);
+    const isLive = cls === 'status-progress';
+    const curIdx = stageIndex(s.status);
+
+    const steps = STAGES.map((stage, i) => {
+      let stepClass = 'step';
+      if (s.status === 'error') stepClass += i <= curIdx ? ' error' : '';
+      else if (i < curIdx || s.status === 'afk') stepClass += ' done';
+      else if (i === curIdx && s.connected) stepClass += ' active';
+      return `<div class="${stepClass}"></div>`;
+    }).join('');
+
+    const logsHtml = (s.logs || []).map(l => {
+      const t = new Date(l.time).toLocaleTimeString('th-TH', { hour12: false });
+      return `<div class="line"><span class="time">${t}</span>${escapeHtml(l.message)}</div>`;
+    }).join('');
+
+    return `
+      <div class="card" data-username="${username}">
+        <div class="card-head">
+          <div class="username">${username}</div>
+          <div class="status-pill ${cls} ${isLive ? 'pulse' : ''}">${s.status || 'unknown'}</div>
+        </div>
+
+        <div class="pipeline">${steps}</div>
+        <div class="pipeline-label">${STAGES[curIdx] ? STAGES[curIdx].label : '-'}</div>
+
+        <div class="log" id="log-${username}">${logsHtml}</div>
+
+        <div class="actions">
+          <button class="btn-disconnect" onclick="disconnectBot('${username}')">Disconnect</button>
+          <button class="btn-reconnect" onclick="reconnectBot('${username}')">Reconnect</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  usernames.forEach(username => {
+    const el = document.getElementById(`log-${username}`);
+    if (el) el.scrollTop = el.scrollHeight;
+  });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function loadInitial() {
+  const res = await fetch('/api/bots');
+  const data = await res.json();
+  Object.assign(state, data);
+  render();
+}
+
+async function addBot() {
+  const input = document.getElementById('new-username');
+  const username = input.value.trim();
+  if (!username) return;
+  await fetch('/api/bots', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username }),
+  });
+  input.value = '';
+}
+
+async function disconnectBot(username) {
+  await fetch(`/api/bots/${encodeURIComponent(username)}/disconnect`, { method: 'POST' });
+}
+
+async function reconnectBot(username) {
+  await fetch(`/api/bots/${encodeURIComponent(username)}/reconnect`, { method: 'POST' });
+}
+
+function connectWs() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${proto}://${location.host}`);
+
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+
+    if (msg.type === 'init') {
+      Object.assign(state, msg.bots);
+      render();
+    } else if (msg.type === 'update') {
+      if (!state[msg.username]) state[msg.username] = { logs: [] };
+      Object.assign(state[msg.username], msg.state);
+      render();
+    } else if (msg.type === 'log') {
+      if (!state[msg.username]) state[msg.username] = { logs: [] };
+      if (!state[msg.username].logs) state[msg.username].logs = [];
+      state[msg.username].logs.push(msg.line);
+      if (state[msg.username].logs.length > 50) state[msg.username].logs.shift();
+      render();
+    }
+  };
+
+  ws.onclose = () => setTimeout(connectWs, 2000);
+}
+
+loadInitial();
+connectWs();
+</script>
+
+</body>
+</html>
