@@ -6,6 +6,27 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// วนเช็ค bot.heldItem ทุกๆ intervalMs จนกว่าจะเจอไอเทม หรือหมดเวลาที่กำหนด
+function waitForHeldItem(bot, timeoutMs = 10000, intervalMs = 200) {
+  return new Promise((resolve) => {
+    const start = Date.now();
+
+    const check = () => {
+      if (bot.heldItem) {
+        resolve(bot.heldItem);
+        return;
+      }
+      if (Date.now() - start >= timeoutMs) {
+        resolve(null); // หมดเวลาแล้วยังไม่เจอ
+        return;
+      }
+      setTimeout(check, intervalMs);
+    };
+
+    check();
+  });
+}
+
 class BotManager extends EventEmitter {
   constructor() {
     super();
@@ -79,14 +100,15 @@ class BotManager extends EventEmitter {
         await sleep(cfg.delayAfterSpawn);
 
         this._updateState(username, { status: 'right-clicking' });
-        bot.setQuickBarSlot(cfg.hotbarSlotToRightClick);
-        await sleep(7000);
+        bot.setQuickBarSlot(1);
 
-        const heldItem = bot.heldItem;
+        // รอจนกว่าไอเทมใน slot จะโหลดเสร็จจริงๆ (แทนการ sleep นิ่งๆ)
+        const heldItem = await waitForHeldItem(bot, 10000);
+
         if (heldItem) {
           this._log(username, `คลิกขวาไอเทม: ${heldItem.name}`);
         } else {
-          this._log(username, `ไม่พบไอเทมใน slot ที่ระบุ (${cfg.hotbarSlotToRightClick})`);
+          this._log(username, 'ไม่พบไอเทมใน slot 1 หลังรอจนหมดเวลา');
         }
 
         const windowOpenPromise = new Promise((resolve) => {
