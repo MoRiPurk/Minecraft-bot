@@ -1,6 +1,27 @@
 const mineflayer = require('mineflayer');
 const cfg = require('./config');
 
+// วนเช็ค bot.heldItem ทุกๆ 200ms จนกว่าจะเจอไอเทม หรือหมดเวลาที่กำหนด
+function waitForHeldItem(bot, timeoutMs = 10000, intervalMs = 200) {
+  return new Promise((resolve) => {
+    const start = Date.now();
+
+    const check = () => {
+      if (bot.heldItem) {
+        resolve(bot.heldItem);
+        return;
+      }
+      if (Date.now() - start >= timeoutMs) {
+        resolve(null); // หมดเวลาแล้วยังไม่เจอ
+        return;
+      }
+      setTimeout(check, intervalMs);
+    };
+
+    check();
+  });
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -36,13 +57,14 @@ function createBot() {
 
       // ---- ขั้นตอนที่ 1: คลิกขวาไอเทมใน hotbar slot 1 (บังคับ) ----
       bot.setQuickBarSlot(1);
-      await sleep(7000);
 
-      const heldItem = bot.heldItem;
+      // รอจนกว่าไอเทมใน slot จะโหลดเสร็จจริงๆ (แทนการ sleep นิ่งๆ)
+      const heldItem = await waitForHeldItem(bot, 10000); // รอสูงสุด 10 วิ
+
       if (heldItem) {
-        console.log(`[${cfg.username}] คลิกขวาไอเทม: ${heldItem.name}`);
+        this._log(username, `คลิกขวาไอเทม: ${heldItem.name}`);
       } else {
-        console.log(`[${cfg.username}] ไม่พบไอเทมใน slot 1`);
+        this._log(username, `ไม่พบไอเทมใน slot 1 หลังรอจนหมดเวลา`);
       }
 
       // เปิดหน้าต่าง GUI ด้วยการคลิกขวา แล้วรอ event windowOpen
@@ -107,27 +129,8 @@ bot.on("windowClose", () => {
       console.log("inventoryStart =", window.inventoryStart);
       console.log("slots =", window.slots.length);
 
-      // ---- ขั้นตอนที่ 3: รอจนกว่าจะ respawn เสร็จ แล้วค่อยพิมพ์ /afk ----
-      console.log(`[${cfg.username}] รอ respawn หลังคลิกไอเทม...`);
-
-      const respawnPromise = new Promise((resolve) => {
-        bot.once('respawn', () => resolve(true));
-      });
-
-      const respawned = await Promise.race([
-        respawnPromise,
-        sleep(cfg.respawnTimeout ?? 15000).then(() => false),
-      ]);
-
-      if (respawned) {
-        console.log(`[${cfg.username}] ตรวจพบ respawn แล้ว`);
-      } else {
-        console.log(`[${cfg.username}] ไม่พบ respawn ภายในเวลาที่กำหนด (timeout) จะพิมพ์ /afk ต่อไป`);
-      }
-
-      // เผื่อเวลาโหลดโลก/สปอนให้เสถียรก่อนพิมพ์คำสั่ง
-      await sleep(cfg.delayAfterRespawn ?? 2000);
-
+      // ---- ขั้นตอนที่ 3: รอ 8 วินาที แล้วพิมพ์ /afk ----
+      await sleep(cfg.delayBeforeAfk);
       bot.chat('/afk');
       console.log(`[${cfg.username}] พิมพ์ /afk เรียบร้อย`);
 
