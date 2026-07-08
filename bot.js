@@ -34,15 +34,15 @@ function createBot() {
     try {
       await sleep(cfg.delayAfterSpawn);
 
-      // ---- ขั้นตอนที่ 1: คลิกขวาไอเทมใน hotbar slot ที่กำหนด ----
-      bot.setQuickBarSlot(cfg.hotbarSlotToRightClick);
+      // ---- ขั้นตอนที่ 1: คลิกขวาไอเทมใน hotbar slot 1 (บังคับ) ----
+      bot.setQuickBarSlot(1);
       await sleep(7000);
 
       const heldItem = bot.heldItem;
       if (heldItem) {
         console.log(`[${cfg.username}] คลิกขวาไอเทม: ${heldItem.name}`);
       } else {
-        console.log(`[${cfg.username}] ไม่พบไอเทมใน slot ที่ระบุ (${cfg.hotbarSlotToRightClick})`);
+        console.log(`[${cfg.username}] ไม่พบไอเทมใน slot 1`);
       }
 
       // เปิดหน้าต่าง GUI ด้วยการคลิกขวา แล้วรอ event windowOpen

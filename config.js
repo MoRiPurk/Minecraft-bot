@@ -7,7 +7,6 @@ module.exports = {
 
   // รายชื่อบอทที่จะเชื่อมต่ออัตโนมัติเมื่อรันโปรแกรม
   bots: [
-    
   ],
 
   hotbarSlotToRightClick: 0,   // slot hotbar ที่จะคลิกขวา (0-8)
